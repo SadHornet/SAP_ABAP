@@ -1,6 +1,7 @@
 REPORT ykvuseridmaint.
 TABLES: usr02, usr21, adr6, devaccess.
 
+* После того, как были заданы используемые таблицы бд мы определяем как нашу основную внутреннюю таблицу.
 
 TYPES: BEGIN OF itab,
          bname        TYPE usr02-bname,
@@ -11,23 +12,24 @@ TYPES: BEGIN OF itab,
          activity(20) TYPE c,
        END OF itab.
 
+* Данный иклюд включает в себя коровые определения данных.
 
 INCLUDE YKVUSERIDMAINT_TOPDATA.
 
 
-* ���������� ������� �������� ������: Username, Validity, LastLogOn � Email.
+* Происходит выборка основных данных: Username, Validity, LastLogOn и Email.
 SELECT usr02~bname, usr02~gltgb, usr02~trdat, devaccess~uname, adr6~smtp_addr
   FROM ( ( ( usr02
- INNER JOIN usr21 ON usr02~bname = usr21~bname  )          " ������� ���������� �� ��� ������. Usr21 �������������� ����� bname Usr02.
-  INNER JOIN adr6 ON usr21~persnumber = adr6~persnumber    " ADR6 �������������� ����� ������������ ������ ������������ Usr21.
-                  AND usr21~addrnumber = adr6~addrnumber )
+ INNER JOIN usr21 ON usr02~bname = usr21~bname  )          " Выборка происходит из трёх таблиц. Usr21 присоединяется через bname Usr02.
+  INNER JOIN adr6 ON usr21~persnumber = adr6~persnumber    " ADR6 присоединяется через персональные номера пользователя из Usr21.
+                  AND usr21~addrnumber = adr6~addrnumber ) " DEVACCESS присоединяется через тот же bname usr02.
   LEFT JOIN devaccess ON usr02~bname = devaccess~uname )
    INTO CORRESPONDING FIELDS OF TABLE @itab2
-* �������: ��� ID, ��-��������������� ������������, ���������� ������������, ���������� �� ��������.
+* Условия: Нет ID, Не-заблокированный пользователь, Диалоговый пользователь, Сортировка по алфавиту.
   WHERE accnt = '' AND uflag = 0 AND ustyp = 'A' ORDER BY usr02~bname.
 
-LOOP AT itab2.
-
+LOOP AT itab2.                " В данном лупе, основываясь на полученных значениях из таблиц бд мы записываем в нужные ячейки нашей внутренней таблицы
+                              " Нужные нам значения.
   IF itab2-uname <> ''.
     itab2-uname = 'Key Found'.
   ELSEIF itab2-uname = ''.
@@ -44,7 +46,7 @@ LOOP AT itab2.
 
 ENDLOOP.
 
-CALL SCREEN 1.
+CALL SCREEN 1. "Вызывается пользовательский интерфейс. Экран был построен с использованием Визарда.
 
 *&SPWIZARD: DECLARATION OF TABLECONTROL 'YKVTABLE' ITSELF
 CONTROLS: ykvtable TYPE TABLEVIEW USING SCREEN 0001.
@@ -335,6 +337,9 @@ FORM fcode_tc_demark_lines USING p_tc_name
     <mark_field> = space.
   ENDLOOP.
 ENDFORM.                                          "fcode_tc_mark_lines
+
+
+* Задаются все основные иклюды.
 
 INCLUDE ykvuseridmaint_status_0001o01.
 
