@@ -1,0 +1,33 @@
+* Данный код описывает логику выполнения SCREEN0001. 
+
+PROCESS BEFORE OUTPUT.
+*&SPWIZARD: PBO FLOW LOGIC FOR TABLECONTROL 'YKVTABLE'
+  MODULE ykvtable_change_tc_attr.
+*&SPWIZARD: MODULE YKVTABLE_CHANGE_COL_ATTR.
+  LOOP AT   itab2
+       WITH CONTROL ykvtable
+       CURSOR ykvtable-current_line.
+    MODULE ykvtable_get_lines.
+    MODULE color.
+*&SPWIZARD:   MODULE YKVTABLE_CHANGE_FIELD_ATTR
+  ENDLOOP.
+
+  MODULE status_0001.
+*
+PROCESS AFTER INPUT.
+*&SPWIZARD: PAI FLOW LOGIC FOR TABLECONTROL 'YKVTABLE'
+  LOOP AT itab2.
+    CHAIN.
+      FIELD itab2-bname.
+      FIELD itab2-gltgb.
+      FIELD itab2-trdat.
+      FIELD itab2-smtp_addr.
+      FIELD itab2-uname.
+      FIELD itab2-activity.
+    ENDCHAIN.
+  ENDLOOP.
+  MODULE ykvtable_user_command.
+*&SPWIZARD: MODULE YKVTABLE_CHANGE_TC_ATTR.
+*&SPWIZARD: MODULE YKVTABLE_CHANGE_COL_ATTR.
+
+  MODULE user_command_0001.
