@@ -1,0 +1,101 @@
+* INCLUDE USER_COMMAND_0001. Данный иклюд задаёт настройки для управления пользовательским интерфейсом: 
+* отклик на двойной щелчок, кнопки "Назад", "Выход" и "Отмена".
+
+
+  DATA: save_ok         LIKE ok_code,
+        output          LIKE ok_code,
+        cursorfield(20),
+        cursorline      TYPE i,
+        current_line    TYPE i,
+        bdcdata like bdcdata occurs 0 WITH HEADER LINE.
+
+* В поле cursorfield записывается название поля, на котором находится курсор.
+* Только в случае, если курсор находится на bname, вызывается транзакция.
+  CASE sy-ucomm.
+
+    WHEN 'SELE'.
+      GET CURSOR FIELD cursorfield VALUE itab2-bname.
+      IF cursorfield = 'ITAB2-BNAME'.
+        GET CURSOR LINE cursorline.                                " Используя номер линии, на которой находится наш курсор, мы можем
+
+* Решаем проблему с прокруткой, вычисляя номер
+* истинной линии, а не используя номер видимой.
+        current_line = YKVTABLE-top_line + cursorline - 1.
+
+        READ TABLE itab2 INDEX current_line COMPARING activity.    " Получить значение того, что нужно делать с пользователем.
+
+        IF itab2-activity = 'Block User'.                       " Если это значение: 'Заблокировать', то мы не пропускаем первый экран.
+
+* Дальше будет подробно расписана работа bdcdata.
+
+          CLEAR: bdcdata, bdcdata[].
+          bdcdata-program = 'SAPLSUID_MAINTENANCE'.
+          bdcdata-dynpro = '1050'.                        " Мы объявляем начало первого экрана работы с пользователем.
+          bdcdata-dynbegin = 'X'.
+          append bdcdata.
+
+          clear bdcdata.
+          bdcdata-fnam = 'SUID_ST_BNAME-BNAME'.           " Мы задаём, над каким пользователям будут проводиться нужные нам операции.
+          bdcdata-fval = itab2-bname.
+          append bdcdata.
+
+          clear bdcdata.
+          bdcdata-fnam = 'BDC_OKCODE'.                    " Мы вызываем нажатие функциональной клавиши по блокировке пользователя.
+          bdcdata-fval = '=LOCK'.
+          append bdcdata.
+          CALL TRANSACTION 'SU01' USING bdcdata mode 'E'.
+
+        ELSEIF itab2-activity = 'Add ID'.                     " Если это значение: 'Добавить ID', то мы сразу попадаем в редактор данных.
+
+          CLEAR: bdcdata, bdcdata[].
+          bdcdata-program  = 'SAPLSUID_MAINTENANCE'.
+          bdcdata-dynpro   = '1050'.
+          bdcdata-dynbegin = 'X'.
+          APPEND bdcdata.
+
+          CLEAR bdcdata.
+          bdcdata-fnam = 'SUID_ST_BNAME-BNAME'.
+          bdcdata-fval = itab2-bname.
+          append bdcdata.
+
+          CLEAR bdcdata.
+          bdcdata-fnam = 'BDC_OKCODE'.
+          bdcdata-fval = '=CHAN'.                        "  Мы вызываем нажатие функциональной клавиши по редактированию пользователя.
+          APPEND bdcdata.
+
+          CLEAR bdcdata.
+          bdcdata-program = 'SAPLSUID_MAINTENANCE'.      " Мы объявляем начало экрана редактирования пользователя.
+          bdcdata-dynpro = '1100'.
+          bdcdata-dynbegin = 'X'.
+          APPEND bdcdata.
+
+          CLEAR bdcdata.
+          bdcdata-fnam = 'BDC_OKCODE'.                   " Мы вызываем нужный нам подэкран - экран с полем для ID пользователя.
+          bdcdata-fval = '=LOGO'.
+          APPEND bdcdata.
+
+          CLEAR bdcdata.
+          bdcdata-fnam = 'BDC_SUBSCR'.
+          bdcdata-fval = 'SAPLSUID_MAINTENANCE                    1101MAINAREA'.
+          APPEND bdcdata.
+
+          CALL TRANSACTION 'SU01' USING bdcdata mode 'E'.
+
+      ENDIF.
+    ENDIF.
+* Очищаем данные временных таблиц, чтобы устранить неправильный вывод значений во время последующих итераций программы.
+    CLEAR sy-ucomm.
+    CLEAR cursorfield.
+    CLEAR cursorline.
+
+  ENDCASE.
+
+* Задаются значения кнопок Назад, Выход и Отмена.
+  save_ok = ok_code.
+  CLEAR ok_code.
+  CASE save_ok.
+    WHEN 'BACK' OR 'CANCEL' OR 'EXIT'.
+      LEAVE PROGRAM.
+    WHEN OTHERS.
+      output = save_ok.
+  ENDCASE.
